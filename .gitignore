@@ -45,3 +45,8 @@ next-env.d.ts
 # playwright
 /.playwright-mcp
 !.env.example
+
+# agent skills installed by integrations (local tooling, not app code)
+/.agents
+/.claude/skills
+/skills-lock.json
