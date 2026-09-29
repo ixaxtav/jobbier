@@ -1,22 +1,31 @@
 /**
- * Development seed: fills an account with a realistic search so every screen
- * has something to show. Usage: npm run db:seed -- you@example.com
- * Refuses to run against anything but a local database.
+ * Fills an account with a realistic search so every screen has something to show.
+ *
+ *   npm run db:seed -- you@example.com [--friend friend@example.com]
+ *
+ * The friend sends the account two leads. If the friend doesn't exist it's
+ * created with a random password (printed once). Local databases only, unless
+ * SEED_ALLOW_REMOTE=1 — and on a remote database it refuses to touch an
+ * account that already has jobs, so it can only ever fill an empty demo account.
  */
+import { randomBytes } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import * as schema from "../src/db/schema";
 import { hashPassword } from "../src/lib/auth/password";
 
-const url = process.env.DATABASE_URL ?? "";
-if (!/localhost|127\.0\.0\.1/.test(url)) {
-  console.error("seed: refusing to seed a non-local database");
+const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || "";
+const isLocal = /localhost|127\.0\.0\.1/.test(url);
+if (!isLocal && process.env.SEED_ALLOW_REMOTE !== "1") {
+  console.error("seed: refusing to seed a non-local database (set SEED_ALLOW_REMOTE=1 to fill an empty demo account)");
   process.exit(1);
 }
-const email = process.argv[2];
-if (!email) {
-  console.error("usage: npm run db:seed -- you@example.com");
+const args = process.argv.slice(2);
+const email = args.find((a) => !a.startsWith("--") && args[args.indexOf(a) - 1] !== "--friend") ?? "";
+const friendEmail = (args.includes("--friend") ? args[args.indexOf("--friend") + 1] : "ana@example.com") ?? "";
+if (!email || !friendEmail) {
+  console.error("usage: npm run db:seed -- you@example.com [--friend friend@example.com]");
   process.exit(1);
 }
 
@@ -54,6 +63,8 @@ async function main() {
   const [me] = await db.select().from(users).where(sql`lower(${users.email}) = ${email.toLowerCase()}`);
   if (!me) throw new Error(`No user with email ${email}. Sign up first.`);
 
+  const [{ count }] = await db.select({ count: sql<number>`count(*)::int` }).from(jobs).where(eq(jobs.userId, me.id));
+  if (count > 0 && !isLocal) throw new Error(`${email} already has ${count} jobs; the seed only fills empty accounts on a remote database.`);
   await db.delete(jobs).where(eq(jobs.userId, me.id));
 
   for (const seed of JOBS) {
@@ -86,10 +97,11 @@ async function main() {
   }
 
   // A friend who sends a lead.
-  const friendEmail = "ana@example.com";
-  let [friend] = await db.select().from(users).where(eq(users.email, friendEmail));
+  let [friend] = await db.select().from(users).where(sql`lower(${users.email}) = ${friendEmail.toLowerCase()}`);
+  let friendPassword: string | null = null;
   if (!friend) {
-    [friend] = await db.insert(users).values({ name: "Ana Rivera", email: friendEmail, passwordHash: await hashPassword("friend-password-123") }).returning();
+    friendPassword = randomBytes(9).toString("base64url");
+    [friend] = await db.insert(users).values({ name: "Ana Rivera", email: friendEmail, passwordHash: await hashPassword(friendPassword) }).returning();
   }
   await db.delete(leads).where(eq(leads.toUserId, me.id));
   await db.insert(leads).values([
@@ -97,7 +109,8 @@ async function main() {
     { fromUserId: friend.id, toUserId: me.id, company: "Resend", title: "Frontend Engineer", location: "San Francisco, CA", workMode: "onsite", note: "Saw this on their blog.", createdAt: ago(3) },
   ]);
 
-  console.log(`seed: added ${JOBS.length} jobs and 2 leads for ${email} (friend: ${friendEmail} / friend-password-123)`);
+  console.log(`seed: added ${JOBS.length} jobs and 2 leads for ${email} from ${friendEmail}`);
+  if (friendPassword) console.log(`seed: created ${friendEmail} with password ${friendPassword}`);
 }
 
 main()
