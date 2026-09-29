@@ -179,7 +179,7 @@ describe("fitWarnings", () => {
   it("compares hourly pay on an annual basis and flags work mode", () => {
     expect(fitWarnings({ payMin: 40, payMax: null, payPeriod: "hour", workMode: "onsite" }, prefs)).toEqual([
       "Pays below your floor of $100K / yr",
-      "On-site, but you're looking for remote",
+      "On-site, but you’re looking for remote",
     ]);
   });
 

@@ -39,9 +39,9 @@ export default async function TodayPage({ searchParams }: PageProps<"/today">) {
   const date = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: user.timeZone }).format(now);
   const headline =
     jobCount === 0
-      ? `Hi ${user.name.split(" ")[0]}. Let's get your search on one line.`
+      ? `Hi ${user.name.split(" ")[0]}. Let’s get your search on one line.`
       : attention.length === 0
-        ? "You're all caught up."
+        ? "You’re all caught up."
         : `${pluralize(attention.length, "thing")} ${attention.length === 1 ? "needs" : "need"} you today.`;
 
   return (

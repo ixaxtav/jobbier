@@ -74,7 +74,7 @@ export async function sendLeads(userId: string, jobId: string, toUserIds: string
   return recipients.length;
 }
 
-async function ownedPendingLead(userId: string, leadId: string) {
+async function ownedIncomingLead(userId: string, leadId: string) {
   const [row] = await db
     .select({ lead: leads, fromName: sender.name })
     .from(leads)
@@ -85,39 +85,56 @@ async function ownedPendingLead(userId: string, leadId: string) {
   return row;
 }
 
-export async function saveLead(userId: string, leadId: string) {
-  const { lead, fromName } = await ownedPendingLead(userId, leadId);
-  if (lead.status === "saved" && lead.jobId) return { jobId: lead.jobId };
+export async function saveLead(userId: string, leadId: string): Promise<{ jobId: string | null }> {
+  const { lead, fromName } = await ownedIncomingLead(userId, leadId);
+  if (lead.status === "saved") return { jobId: lead.jobId };
 
-  const job = await createJob(
-    userId,
-    {
-      company: lead.company,
-      title: lead.title,
-      url: lead.url,
-      location: lead.location,
-      workMode: lead.workMode,
-      payMin: lead.payMin,
-      payMax: lead.payMax,
-      payPeriod: lead.payPeriod,
-      currency: "USD",
-      description: lead.description,
-      source: fromName ? `Lead from ${fromName}` : "Lead from a friend",
-      excitement: null,
-    },
-    { leadFrom: fromName ?? "a friend" },
-  );
-  await db.update(leads).set({ status: "saved", jobId: job.id, respondedAt: new Date() }).where(eq(leads.id, lead.id));
-  return { jobId: job.id };
+  // Claim the lead first: one conditional UPDATE, so a double tap can't create two jobs.
+  const [claimed] = await db
+    .update(leads)
+    .set({ status: "saved", respondedAt: new Date() })
+    .where(and(eq(leads.id, lead.id), eq(leads.toUserId, userId), ne(leads.status, "saved")))
+    .returning({ id: leads.id });
+  if (!claimed) {
+    const [row] = await db.select({ jobId: leads.jobId }).from(leads).where(eq(leads.id, lead.id));
+    return { jobId: row?.jobId ?? null };
+  }
+
+  try {
+    const job = await createJob(
+      userId,
+      {
+        company: lead.company,
+        title: lead.title,
+        url: lead.url,
+        location: lead.location,
+        workMode: lead.workMode,
+        payMin: lead.payMin,
+        payMax: lead.payMax,
+        payPeriod: lead.payPeriod,
+        currency: "USD",
+        description: lead.description,
+        source: fromName ? `Lead from ${fromName}` : "Lead from a friend",
+        excitement: null,
+      },
+      { leadFrom: fromName ?? "a friend" },
+    );
+    await db.update(leads).set({ jobId: job.id }).where(eq(leads.id, lead.id));
+    return { jobId: job.id };
+  } catch (error) {
+    // Put the lead back so it can be saved again.
+    await db.update(leads).set({ status: lead.status, respondedAt: null }).where(eq(leads.id, lead.id));
+    throw error;
+  }
 }
 
 export async function dismissLead(userId: string, leadId: string) {
-  const { lead } = await ownedPendingLead(userId, leadId);
+  const { lead } = await ownedIncomingLead(userId, leadId);
   await db.update(leads).set({ status: "dismissed", respondedAt: new Date() }).where(eq(leads.id, lead.id));
 }
 
 export async function restoreLead(userId: string, leadId: string) {
-  const { lead } = await ownedPendingLead(userId, leadId);
+  const { lead } = await ownedIncomingLead(userId, leadId);
   if (lead.status !== "dismissed") return;
   await db.update(leads).set({ status: "pending", respondedAt: null }).where(eq(leads.id, lead.id));
 }

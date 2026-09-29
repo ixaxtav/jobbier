@@ -23,7 +23,7 @@ export function StageTrack({ jobId, jobLabel, initial }: { jobId: string; jobLab
   const [, start] = useTransition();
   const [closing, setClosing] = useState(false);
 
-  function move(stage: Stage, outcome: Outcome | null = null, undoable = true) {
+  function move(stage: Stage, outcome: Outcome | null = null) {
     if (stage === state.stage && outcome === state.outcome) return;
     const previous = { stage: state.stage, outcome: state.outcome };
     const furthest = trackIndex(stage) > trackIndex(state.furthestStage) ? stage : state.furthestStage;
@@ -32,11 +32,15 @@ export function StageTrack({ jobId, jobLabel, initial }: { jobId: string; jobLab
       const result = await moveJobAction(jobId, stage, outcome);
       if (!result.ok) return void toast.error(result.error);
       // A stop is one tap away, so every move can be taken back.
-      if (undoable) {
-        toast(`Moved to ${stageLabel(stage, outcome)}`, {
-          action: { label: "Undo", onClick: () => move(previous.stage, previous.outcome, false) },
-        });
-      }
+      toast(`Moved to ${stageLabel(stage, outcome)}`, {
+        action: {
+          label: "Undo",
+          onClick: () =>
+            void moveJobAction(jobId, previous.stage, previous.outcome).then((r) => {
+              if (!r.ok) toast.error(r.error);
+            }),
+        },
+      });
     });
   }
 

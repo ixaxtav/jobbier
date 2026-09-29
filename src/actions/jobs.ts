@@ -24,6 +24,8 @@ import {
   nextActionInput,
   ok,
   stageMoveInput,
+  isId,
+  badId,
   type ActionResult,
 } from "@/lib/validation";
 import type { Outcome, Stage } from "@/db/schema";
@@ -52,6 +54,7 @@ export async function createJobAction(_: unknown, form: FormData): Promise<Actio
 
 export async function updateJobAction(jobId: string, _: unknown, form: FormData): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId)) return badId();
   const parsed = jobInput.safeParse(formToObject(form));
   if (!parsed.success) return invalid(parsed.error);
   return guard(async () => {
@@ -64,7 +67,7 @@ export async function updateJobAction(jobId: string, _: unknown, form: FormData)
 export async function moveJobAction(jobId: string, stage: Stage, outcome: Outcome | null = null): Promise<ActionResult> {
   const user = await requireUser();
   const parsed = stageMoveInput.safeParse({ jobId, stage, outcome });
-  if (!parsed.success) return fail("That move isn't possible.");
+  if (!parsed.success) return fail("That move isn’t possible.");
   return guard(async () => {
     const result = await moveJob(user.id, parsed.data.jobId, parsed.data.stage, parsed.data.outcome);
     if ("error" in result) return fail(result.error);
@@ -88,6 +91,7 @@ export async function setNextActionAction(_: unknown, form: FormData): Promise<A
 
 export async function clearNextActionAction(jobId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId)) return badId();
   return guard(async () => {
     await setNextAction(user.id, jobId, null, null);
     refresh();
@@ -97,6 +101,7 @@ export async function clearNextActionAction(jobId: string): Promise<ActionResult
 
 export async function setExcitementAction(jobId: string, excitement: number | null): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId)) return badId();
   if (excitement != null && (!Number.isInteger(excitement) || excitement < 1 || excitement > 5)) return fail("Pick 1 to 5.");
   return guard(async () => {
     await setExcitement(user.id, jobId, excitement);
@@ -107,6 +112,7 @@ export async function setExcitementAction(jobId: string, excitement: number | nu
 
 export async function deleteJobAction(jobId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId)) return badId();
   await guard(async () => {
     await deleteJob(user.id, jobId);
     return ok();
@@ -124,12 +130,12 @@ export async function importJobAction(url: string): Promise<ActionResult<ImportR
     const job = parseJobPage(page.html, page.url);
     const duplicate = (await findDuplicateByUrl(user.id, job.url)) ?? (await findDuplicateByUrl(user.id, url.trim()));
     if (!job.title && !job.company) {
-      return fail("Couldn't find job details on that page. Fill them in by hand — the link is kept.");
+      return fail("Couldn’t find job details on that page. Fill them in by hand — the link is kept.");
     }
     return ok({ ...job, duplicate });
   } catch (error) {
     if (error instanceof ImportError) return fail(error.message);
     console.error("import failed", error);
-    return fail("Couldn't read that page. Fill in the details by hand.");
+    return fail("Couldn’t read that page. Fill in the details by hand.");
   }
 }

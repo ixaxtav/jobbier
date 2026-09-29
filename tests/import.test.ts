@@ -96,11 +96,18 @@ describe("htmlToText", () => {
 
 describe("import safety", () => {
   it("blocks private and local addresses", () => {
-    for (const ip of ["127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "::ffff:10.0.0.1", "0.0.0.0"]) {
+    for (const ip of ["127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "::ffff:10.0.0.1", "0.0.0.0", "255.255.255.255", "198.18.0.1"]) {
       expect(isPrivateAddress(ip), ip).toBe(true);
     }
-    for (const ip of ["8.8.8.8", "172.32.0.1", "2606:4700::1111"]) {
+    for (const ip of ["8.8.8.8", "172.32.0.1", "2606:4700::1111", "::ffff:8.8.8.8", "2002:0808:0808::1"]) {
       expect(isPrivateAddress(ip), ip).toBe(false);
+    }
+  });
+
+  it("sees IPv4 hidden inside IPv6, however it's written", () => {
+    // new URL("http://[::ffff:127.0.0.1]") normalises to ::ffff:7f00:1 — the bypass the review found.
+    for (const ip of ["::ffff:7f00:1", "[::ffff:a9fe:a9fe]", "0:0:0:0:0:ffff:7f00:0001", "::127.0.0.1", "64:ff9b::a9fe:a9fe", "2002:7f00:1::", "2001:0:4136:e378::1", "fe80::1%en0", "fec0::1", "ff02::1", "::", "nonsense"]) {
+      expect(isPrivateAddress(ip), ip).toBe(true);
     }
   });
 
@@ -108,5 +115,8 @@ describe("import safety", () => {
     expect(normalizeUrl("jobs.lever.co/acme/1").toString()).toBe("https://jobs.lever.co/acme/1");
     expect(() => normalizeUrl("ftp://x.test")).toThrow();
     expect(() => normalizeUrl("https://user:pw@x.test")).toThrow();
+    expect(() => normalizeUrl("http://[::ffff:127.0.0.1]/")).toThrow(/private/);
+    expect(() => normalizeUrl("http://metadata.google.internal/")).toThrow(/private/);
+    expect(() => normalizeUrl("https://example.com:6379/")).toThrow(/port/);
   });
 });

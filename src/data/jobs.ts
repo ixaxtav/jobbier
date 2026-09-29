@@ -152,12 +152,8 @@ export async function moveJob(userId: string, jobId: string, to: Stage, outcome:
   return db.transaction(async (tx) => {
     const [updated] = await tx
       .update(jobs)
-      .set({
-        ...change,
-        updatedAt: change.stageChangedAt,
-        // Closing a job means there's nothing left to follow up on.
-        ...(to === "closed" ? { nextAction: null, nextActionDue: null } : {}),
-      })
+      // The follow-up is kept on close (it's hidden and ignored while closed) so Undo or Reopen restores it.
+      .set({ ...change, updatedAt: change.stageChangedAt })
       .where(and(eq(jobs.id, jobId), eq(jobs.userId, userId)))
       .returning();
     await tx.insert(activities).values({

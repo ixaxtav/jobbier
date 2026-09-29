@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   if (!(file instanceof File)) return NextResponse.json({ error: "No file" }, { status: 400 });
   if (!isKeyOwnedBy(key, user.id)) return NextResponse.json({ error: "Invalid upload path" }, { status: 400 });
   if (file.size > MAX_FILE_BYTES) return NextResponse.json({ error: "Files can be up to 10 MB" }, { status: 413 });
-  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "That file type isn't supported" }, { status: 415 });
+  if (!ALLOWED_TYPES.includes(file.type)) return NextResponse.json({ error: "That file type isn’t supported" }, { status: 415 });
 
   await saveLocalFile(key, await file.arrayBuffer());
   return NextResponse.json({ pathname: key });

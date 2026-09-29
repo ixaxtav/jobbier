@@ -19,17 +19,25 @@ export async function createUser(values: { name: string; email: string; password
 }
 
 const LOCK_AFTER = 8;
-const LOCK_MINUTES = 15;
 
-/** Records a failed sign-in; locks the account for a while after repeated failures. */
-export async function recordFailedLogin(userId: string) {
-  await db
-    .update(users)
-    .set({
-      failedLogins: sql`${users.failedLogins} + 1`,
-      lockedUntil: sql`case when ${users.failedLogins} + 1 >= ${LOCK_AFTER} then now() + interval '${sql.raw(String(LOCK_MINUTES))} minutes' else ${users.lockedUntil} end`,
-    })
-    .where(eq(users.id, userId));
+/**
+ * Counts a sign-in attempt and returns false if the account is locked. One
+ * UPDATE does the check and the increment, so concurrent guesses can't race
+ * past the limit. The counter starts over once a lock expires, so a lockout
+ * doesn't turn every later typo into another 15-minute lock.
+ */
+export async function claimLoginAttempt(userId: string): Promise<boolean> {
+  const rows = await db.execute<{ id: string }>(sql`
+    update users set
+      failed_logins = case when locked_until is not null and locked_until <= now() then 1 else failed_logins + 1 end,
+      locked_until = case
+        when (case when locked_until is not null and locked_until <= now() then 1 else failed_logins + 1 end) >= ${LOCK_AFTER}
+          then now() + interval '15 minutes'
+        else null
+      end
+    where id = ${userId} and (locked_until is null or locked_until <= now())
+    returning id`);
+  return rows.length > 0;
 }
 
 export async function clearFailedLogins(userId: string) {

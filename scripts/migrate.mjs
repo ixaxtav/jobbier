@@ -3,6 +3,12 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import postgres from "postgres";
 
+// Preview deploys must never change the production schema.
+if (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") {
+  console.log(`migrate: skipped on ${process.env.VERCEL_ENV} deploys`);
+  process.exit(0);
+}
+
 const url = process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!url) {
   console.error("migrate: DATABASE_URL is not set");

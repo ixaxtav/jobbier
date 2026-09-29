@@ -110,7 +110,7 @@ export function JobFields({
 
       <div className="sm:col-span-2">
         {showDescription ? (
-          <Field label="Job description" hint="Paste the posting — it's handy when prepping for interviews." error={errors.description}>
+          <Field label="Job description" hint="Paste the posting — it’s handy when prepping for interviews." error={errors.description}>
             {(p) => <Textarea {...p} name="description" defaultValue={defaults.description ?? ""} rows={6} />}
           </Field>
         ) : (

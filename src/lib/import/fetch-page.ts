@@ -1,12 +1,34 @@
 import "server-only";
-import { lookup } from "node:dns/promises";
-import { isIP } from "node:net";
+import { lookup, type LookupAddress } from "node:dns";
+import { isIP, type LookupFunction } from "node:net";
+import { Agent, fetch } from "undici";
+import { isPrivateAddress } from "./ip";
+
+export { isPrivateAddress };
 
 const MAX_BYTES = 3 * 1024 * 1024;
 const TIMEOUT_MS = 8000;
 const MAX_REDIRECTS = 4;
 
 export class ImportError extends Error {}
+
+/**
+ * Every connection this agent opens is checked at connect time: the addresses
+ * DNS actually returned are validated right before the socket uses them, so a
+ * hostname can't pass a check and then re-resolve to something private.
+ */
+const guardedLookup: LookupFunction = (hostname, options, callback) => {
+  lookup(hostname, { ...options, all: true }, (error, addresses: LookupAddress[]) => {
+    if (error) return callback(error, "", 0);
+    if (addresses.length === 0 || addresses.some((a) => isPrivateAddress(a.address))) {
+      return callback(new ImportError("That link points to a private address."), "", 0);
+    }
+    if (options.all) return (callback as unknown as (e: null, a: LookupAddress[]) => void)(null, addresses);
+    callback(null, addresses[0].address, addresses[0].family);
+  });
+};
+
+const agent = new Agent({ connect: { lookup: guardedLookup, timeout: TIMEOUT_MS } });
 
 /**
  * Fetches a public web page for import. The server makes this request on the
@@ -17,8 +39,9 @@ export async function fetchPublicPage(input: string): Promise<{ html: string; ur
   let url = normalizeUrl(input);
 
   for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    await assertPublicHost(url);
+    assertAllowedUrl(url);
     const response = await fetch(url, {
+      dispatcher: agent,
       redirect: "manual",
       signal: AbortSignal.timeout(TIMEOUT_MS),
       headers: {
@@ -28,17 +51,22 @@ export async function fetchPublicPage(input: string): Promise<{ html: string; ur
         "accept-language": "en-US,en;q=0.9",
       },
     }).catch((error: unknown) => {
+      const cause = error instanceof Error ? (error.cause ?? error) : error;
+      if (cause instanceof ImportError) throw cause;
       if (error instanceof Error && error.name === "TimeoutError") throw new ImportError("That page took too long to respond.");
-      throw new ImportError("Couldn't reach that page.");
+      if ((cause as NodeJS.ErrnoException)?.code === "ENOTFOUND") throw new ImportError("Couldn’t find that website.");
+      throw new ImportError("Couldn’t reach that page.");
     });
 
     if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("location");
+      await response.body?.cancel();
       if (!location) throw new ImportError("That page redirected somewhere unexpected.");
       url = new URL(location, url);
       continue;
     }
     if (!response.ok) {
+      await response.body?.cancel();
       throw new ImportError(
         response.status === 403 || response.status === 429
           ? "That site blocks automatic reading. Fill in the details by hand."
@@ -46,9 +74,12 @@ export async function fetchPublicPage(input: string): Promise<{ html: string; ur
       );
     }
     const type = response.headers.get("content-type") ?? "";
-    if (!type.includes("html")) throw new ImportError("That link isn't a web page.");
+    if (!type.includes("html")) {
+      await response.body?.cancel();
+      throw new ImportError("That link isn’t a web page.");
+    }
 
-    return { html: await readLimited(response), url: url.toString() };
+    return { html: await readLimited(response.body as ReadableStream<Uint8Array> | null), url: url.toString() };
   }
   throw new ImportError("That page redirected too many times.");
 }
@@ -59,45 +90,28 @@ export function normalizeUrl(input: string): URL {
   try {
     url = new URL(/^[a-z][a-z\d+.-]*:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`);
   } catch {
-    throw new ImportError("That doesn't look like a link.");
+    throw new ImportError("That doesn’t look like a link.");
   }
-  if (url.protocol !== "http:" && url.protocol !== "https:") throw new ImportError("Only http and https links work.");
-  if (url.username || url.password) throw new ImportError("Links with passwords in them aren't supported.");
+  assertAllowedUrl(url);
   return url;
 }
 
-async function assertPublicHost(url: URL) {
+/** Checked for the first URL and again after every redirect. */
+function assertAllowedUrl(url: URL) {
+  if (url.protocol !== "http:" && url.protocol !== "https:") throw new ImportError("Only http and https links work.");
+  if (url.username || url.password) throw new ImportError("Links with passwords in them aren’t supported.");
+  if (url.port && !["80", "443", "8080", "8443"].includes(url.port)) throw new ImportError("That link uses an unusual port.");
   const host = url.hostname.replace(/^\[|\]$/g, "");
-  if (host === "localhost" || host.endsWith(".localhost") || host.endsWith(".internal") || host.endsWith(".local")) {
+  if (host === "localhost" || /\.(localhost|internal|local|lan|home|corp)$/i.test(host)) {
     throw new ImportError("That link points to a private address.");
   }
-  const addresses = isIP(host) ? [host] : (await lookup(host, { all: true }).catch(() => [])).map((a) => a.address);
-  if (addresses.length === 0) throw new ImportError("Couldn't find that website.");
-  if (addresses.some(isPrivateAddress)) throw new ImportError("That link points to a private address.");
+  // IP literals skip DNS (and so skip the connect-time check): validate them here.
+  if (isIP(host) && isPrivateAddress(host)) throw new ImportError("That link points to a private address.");
 }
 
-export function isPrivateAddress(address: string): boolean {
-  if (isIP(address) === 4) {
-    const [a, b] = address.split(".").map(Number);
-    return (
-      a === 0 ||
-      a === 10 ||
-      a === 127 ||
-      (a === 100 && b >= 64 && b <= 127) ||
-      (a === 169 && b === 254) ||
-      (a === 172 && b >= 16 && b <= 31) ||
-      (a === 192 && b === 168) ||
-      a >= 224
-    );
-  }
-  const v6 = address.toLowerCase();
-  if (v6.startsWith("::ffff:")) return isPrivateAddress(v6.slice(7));
-  return v6 === "::" || v6 === "::1" || v6.startsWith("fc") || v6.startsWith("fd") || v6.startsWith("fe80");
-}
-
-async function readLimited(response: Response): Promise<string> {
-  const reader = response.body?.getReader();
-  if (!reader) return "";
+async function readLimited(body: ReadableStream<Uint8Array> | null): Promise<string> {
+  if (!body) return "";
+  const reader = body.getReader();
   const chunks: Uint8Array[] = [];
   let size = 0;
   while (true) {

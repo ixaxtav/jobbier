@@ -123,8 +123,8 @@ export default async function LeadsPage({ searchParams }: PageProps<"/leads">) {
       ) : sent.length === 0 ? (
         <EmptyState
           icon={<Send />}
-          title="You haven't sent any leads"
-          body="Found a job that's more a friend's thing than yours? Add it, then use “Send to a friend” on its page."
+          title="You haven’t sent any leads"
+          body="Found a job that’s more a friend’s thing than yours? Add it, then use “Send to a friend” on its page."
         />
       ) : (
         <ul className="divide-y divide-line rounded-lg border border-line bg-surface">

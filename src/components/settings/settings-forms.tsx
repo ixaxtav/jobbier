@@ -91,7 +91,7 @@ export function PreferencesForm({
           </Select>
         </div>
         <p className={cn("text-xs", errors.payFloor ? "font-medium text-danger" : "text-ink-3")}>
-          {errors.payFloor ?? "The least you'd take. Jobs that pay less get a quiet warning — nothing is hidden."}
+          {errors.payFloor ?? "The least you’d take. Jobs that pay less get a quiet warning — nothing is hidden."}
         </p>
       </fieldset>
 
@@ -138,7 +138,7 @@ export function InviteCard({ code, url }: { code: string; url: string }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      toast.error("Couldn't copy — select the text instead.");
+      toast.error("Couldn’t copy — select the text instead.");
     }
   }
   return (

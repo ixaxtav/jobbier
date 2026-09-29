@@ -206,7 +206,7 @@ function EventDialog({
           {(p) => <Input {...p} name="location" defaultValue={event?.location ?? ""} placeholder="https://meet.google.com/…" />}
         </Field>
         <Field label="Notes" error={errors.notes} className="sm:col-span-2">
-          {(p) => <Textarea {...p} name="notes" defaultValue={event?.notes ?? ""} rows={3} placeholder="Who you're meeting, what to prepare" />}
+          {(p) => <Textarea {...p} name="notes" defaultValue={event?.notes ?? ""} rows={3} placeholder="Who you’re meeting, what to prepare" />}
         </Field>
         <div className="sm:col-span-2">
           <FormError message={state && !state.ok && !state.fieldErrors ? state.error : null} />

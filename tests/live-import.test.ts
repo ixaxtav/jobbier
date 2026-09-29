@@ -14,4 +14,8 @@ describe.runIf(process.env.LIVE)("live import", () => {
   it("refuses the cloud metadata address", async () => {
     await expect(fetchPublicPage("http://169.254.169.254/latest")).rejects.toThrow(/private/);
   });
+
+  it("refuses public hostnames that resolve to private addresses (checked at connect time)", async () => {
+    await expect(fetchPublicPage("http://127.0.0.1.nip.io/")).rejects.toThrow(/private/);
+  });
 });

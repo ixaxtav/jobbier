@@ -15,7 +15,7 @@ import { NotFoundError } from "@/data/jobs";
 import { attachDocument, detachDocument } from "@/data/documents";
 import { requireUser } from "@/lib/auth/session";
 import { zonedLocalToUtc } from "@/lib/dates";
-import { contactInput, eventInput, fail, formToObject, invalid, noteInput, ok, type ActionResult } from "@/lib/validation";
+import { contactInput, eventInput, fail, formToObject, invalid, noteInput, ok, isId, badId, type ActionResult } from "@/lib/validation";
 
 function refresh() {
   revalidatePath("/", "layout");
@@ -41,12 +41,14 @@ export async function addNoteAction(_: unknown, form: FormData): Promise<ActionR
 
 export async function deleteNoteAction(activityId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(activityId)) return badId();
   return guard(() => deleteNote(user.id, activityId));
 }
 
 /** Create when there's no eventId, otherwise update. Times arrive as wall-clock in the user's zone. */
 export async function saveEventAction(eventId: string | null, _: unknown, form: FormData): Promise<ActionResult> {
   const user = await requireUser();
+  if ((eventId !== null && !isId(eventId))) return badId();
   const parsed = eventInput.safeParse(formToObject(form));
   if (!parsed.success) return invalid(parsed.error);
   const { jobId, startsAt, ...rest } = parsed.data;
@@ -61,11 +63,13 @@ export async function saveEventAction(eventId: string | null, _: unknown, form: 
 
 export async function deleteEventAction(eventId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(eventId)) return badId();
   return guard(() => deleteEvent(user.id, eventId));
 }
 
 export async function saveContactAction(contactId: string | null, _: unknown, form: FormData): Promise<ActionResult> {
   const user = await requireUser();
+  if ((contactId !== null && !isId(contactId))) return badId();
   const parsed = contactInput.safeParse(formToObject(form));
   if (!parsed.success) return invalid(parsed.error);
   const { jobId, ...values } = parsed.data;
@@ -77,15 +81,18 @@ export async function saveContactAction(contactId: string | null, _: unknown, fo
 
 export async function deleteContactAction(contactId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(contactId)) return badId();
   return guard(() => deleteContact(user.id, contactId));
 }
 
 export async function attachDocumentAction(jobId: string, documentId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId) || !isId(documentId)) return badId();
   return guard(() => attachDocument(user.id, jobId, documentId));
 }
 
 export async function detachDocumentAction(jobId: string, documentId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(jobId) || !isId(documentId)) return badId();
   return guard(() => detachDocument(user.id, jobId, documentId));
 }

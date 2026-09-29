@@ -9,7 +9,7 @@ import { ALLOWED_TYPES, MAX_FILE_BYTES, isKeyOwnedBy, usesBlob } from "@/lib/sto
  * in the database afterwards by `registerDocumentAction`, which re-checks it.
  */
 export async function POST(request: Request) {
-  if (!usesBlob()) return NextResponse.json({ error: "Blob storage isn't configured" }, { status: 501 });
+  if (!usesBlob()) return NextResponse.json({ error: "Blob storage isn’t configured" }, { status: 501 });
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in again to upload" }, { status: 401 });
 

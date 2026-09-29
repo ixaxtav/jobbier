@@ -4,7 +4,7 @@ import { dayKey, daysBetweenKeys, formatDateTime, formatDayInline } from "@/lib/
 import { cn } from "@/lib/cn";
 
 /**
- * The one line of "what's next" under a job: the next event if there is one,
+ * The one line of "what’s next" under a job: the next event if there is one,
  * otherwise your follow-up. Never both — one next thing is easier to act on.
  */
 export function NextThing({

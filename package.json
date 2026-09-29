@@ -13,7 +13,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "db:seed": "node --env-file-if-exists=.env.local --import tsx scripts/seed.ts",
-    "user:reset-password": "node --env-file-if-exists=.env.local --import tsx scripts/reset-password.ts"
+    "user:reset-password": "node --env-file-if-exists=.env.local --import tsx scripts/reset-password.ts",
+    "test:db": "DATABASE_URL=postgres://localhost:5432/jobbier_test node scripts/migrate.mjs && DB_TESTS=1 DATABASE_URL=postgres://localhost:5432/jobbier_test vitest run tests/data.test.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -29,6 +30,7 @@
     "react-dom": "19.2.8",
     "server-only": "^0.0.1",
     "sonner": "^2.0.8",
+    "undici": "^7.30.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

@@ -19,7 +19,8 @@ export function LeadActions({ leadId, size = "md" }: { leadId: string; size?: "s
           start(async () => {
             const result = await saveLeadAction(leadId);
             if (!result.ok) return void toast.error(result.error);
-            toast("Saved to your jobs", { action: { label: "Open", onClick: () => router.push(`/jobs/${result.data.jobId}`) } });
+            const jobId = result.data.jobId;
+            toast("Saved to your jobs", jobId ? { action: { label: "Open", onClick: () => router.push(`/jobs/${jobId}`) } } : undefined);
           })
         }
       >

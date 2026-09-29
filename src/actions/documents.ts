@@ -9,7 +9,7 @@ import { attachDocument, createDocument, deleteDocument, renameDocument } from "
 import { NotFoundError } from "@/data/jobs";
 import { requireUser } from "@/lib/auth/session";
 import { ALLOWED_TYPES, MAX_FILE_BYTES, isKeyOwnedBy, removeFile, usesBlob } from "@/lib/storage";
-import { documentKindInput, fail, invalid, ok, type ActionResult } from "@/lib/validation";
+import { documentKindInput, fail, invalid, ok, isId, badId, type ActionResult } from "@/lib/validation";
 
 const registerInput = z.object({
   key: z.string().min(1).max(400),
@@ -27,7 +27,7 @@ export async function registerDocumentAction(input: z.input<typeof registerInput
   const parsed = registerInput.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const { key, name, kind, attachToJobId } = parsed.data;
-  if (!isKeyOwnedBy(key, user.id)) return fail("That upload doesn't belong to you.");
+  if (!isKeyOwnedBy(key, user.id)) return fail("That upload doesn’t belong to you.");
 
   let size: number;
   let contentType: string;
@@ -41,7 +41,7 @@ export async function registerDocumentAction(input: z.input<typeof registerInput
       contentType = guessType(key);
     }
   } catch {
-    return fail("The upload didn't finish. Try again.");
+    return fail("The upload didn’t finish. Try again.");
   }
   if (size > MAX_FILE_BYTES || !ALLOWED_TYPES.includes(contentType)) {
     await removeFile(key);
@@ -76,6 +76,7 @@ function guessType(key: string) {
 
 export async function updateDocumentAction(documentId: string, name: string, kind: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(documentId)) return badId();
   const parsed = z.object({ name: z.string().trim().min(1, "Give the file a name").max(160), kind: documentKindInput }).safeParse({ name, kind });
   if (!parsed.success) return invalid(parsed.error);
   try {
@@ -90,6 +91,7 @@ export async function updateDocumentAction(documentId: string, name: string, kin
 
 export async function deleteDocumentAction(documentId: string): Promise<ActionResult> {
   const user = await requireUser();
+  if (!isId(documentId)) return badId();
   await deleteDocument(user.id, documentId);
   revalidatePath("/", "layout");
   return ok();

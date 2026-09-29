@@ -3,7 +3,22 @@ import { getEvent } from "@/data/job-details";
 import { getCurrentUser } from "@/lib/auth/session";
 
 const stamp = (d: Date) => d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
-const escape = (s: string) => s.replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
+const escape = (s: string) => s.replace(/\r\n?/g, "\n").replace(/\\/g, "\\\\").replace(/\n/g, "\\n").replace(/([,;])/g, "\\$1");
+
+/** RFC 5545: lines over 75 octets continue on the next line after a space. */
+function fold(line: string) {
+  const bytes = new TextEncoder();
+  const out: string[] = [];
+  let current = "";
+  for (const char of line) {
+    if (bytes.encode(current + char).length > (out.length ? 74 : 75)) {
+      out.push(current);
+      current = char;
+    } else current += char;
+  }
+  out.push(current);
+  return out.join("\r\n ");
+}
 
 /** A single-event calendar file, so interviews land in whatever calendar you already use. */
 export async function GET(_: Request, ctx: RouteContext<"/api/events/[id]/ics">) {
@@ -35,7 +50,7 @@ export async function GET(_: Request, ctx: RouteContext<"/api/events/[id]/ics">)
   ].filter(Boolean);
 
   const slug = `${company}-${event.title}`.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
-  return new NextResponse(lines.join("\r\n"), {
+  return new NextResponse(lines.map((l) => fold(l!)).join("\r\n"), {
     headers: {
       "content-type": "text/calendar; charset=utf-8",
       "content-disposition": `attachment; filename="${slug || "event"}.ics"`,

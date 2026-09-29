@@ -14,6 +14,11 @@ export function ok<T>(data?: T) {
 
 export const fail = (error: string, fieldErrors?: Record<string, string>) => ({ ok: false as const, error, fieldErrors });
 
+const uuid = z.uuid();
+/** Server Actions are public endpoints: every id argument is checked before it reaches a query. */
+export const isId = (value: unknown): value is string => uuid.safeParse(value).success;
+export const badId = () => fail("That item no longer exists. Refresh the page.");
+
 /** Turn a zod error into one message per field (first issue wins). */
 export function fieldErrors(error: z.ZodError): Record<string, string> {
   const out: Record<string, string> = {};
@@ -83,7 +88,7 @@ export function parseMoney(input: unknown): number | null | typeof NaN {
 
 const money = z.preprocess(
   parseMoney,
-  z.number({ error: "Use a number, like 120k" }).int().min(0).max(100_000_000, "That's a lot — check the number").nullable(),
+  z.number({ error: "Use a number, like 120k" }).int().min(0).max(100_000_000, "That’s a lot — check the number").nullable(),
 );
 
 const optionalEnum = <T extends [string, ...string[]]>(values: T) =>
@@ -171,7 +176,7 @@ export const leadInput = z.object({
   note: optionalText(500, "Message"),
 });
 
-const password = z.string().min(10, "Use at least 10 characters").max(200, "That's too long");
+const password = z.string().min(10, "Use at least 10 characters").max(200, "That’s too long");
 
 export const signUpInput = z.object({
   name: requiredText(80, "Name"),
@@ -200,4 +205,4 @@ export const preferencesInput = z.object({
 
 export const passwordChangeInput = z
   .object({ current: z.string().min(1, "Enter your current password"), next: password, confirm: z.string() })
-  .refine((v) => v.next === v.confirm, { path: ["confirm"], message: "Passwords don't match" });
+  .refine((v) => v.next === v.confirm, { path: ["confirm"], message: "Passwords don’t match" });

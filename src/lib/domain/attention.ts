@@ -70,7 +70,7 @@ export function needsAttention(jobs: AttentionJob[], ctx: Context): AttentionIte
       }
     } else if (job.stage === "saved" && (job.excitement ?? 0) >= 4) {
       const age = daysSince(job.createdAt, ctx.now, ctx.timeZone);
-      if (age >= 3) items.push({ ...base, kind: "excited", message: "You're excited about this one — apply?", detail: `Saved ${pluralize(age, "day")} ago` });
+      if (age >= 3) items.push({ ...base, kind: "excited", message: "You’re excited about this one — apply?", detail: `Saved ${pluralize(age, "day")} ago` });
     }
   }
 

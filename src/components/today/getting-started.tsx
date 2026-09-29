@@ -20,7 +20,7 @@ export function GettingStarted({ steps, firstRun }: { steps: Steps; firstRun: bo
   const items = [
     {
       done: steps.hasJob,
-      title: "Add the first job you're looking at",
+      title: "Add the first job you’re looking at",
       body: "Paste a link — Jobbier reads the posting and fills in the details.",
       action: (
         <Button variant="primary" size="sm" onClick={() => addJob.open()}>
@@ -41,7 +41,7 @@ export function GettingStarted({ steps, firstRun }: { steps: Steps; firstRun: bo
     {
       done: steps.hasPreferences,
       title: "Set your pay floor",
-      body: "Jobbier will flag jobs that pay less than you're willing to take.",
+      body: "Jobbier will flag jobs that pay less than you’re willing to take.",
       action: (
         <Link href="/settings#preferences" className="text-sm font-medium underline decoration-line-strong underline-offset-4 hover:decoration-ink">
           Open settings

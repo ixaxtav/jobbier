@@ -32,9 +32,11 @@ function localPath(key: string) {
   return resolved;
 }
 
-/** Storage keys are always namespaced by user: `users/<userId>/<random>-<name>`. */
+/** Storage keys are always `users/<userId>/<uuid>-<safe name>` — nothing else is accepted. */
 export function isKeyOwnedBy(key: string, userId: string) {
-  return key.startsWith(`users/${userId}/`);
+  const pattern = /^users\/([0-9a-f-]{36})\/[0-9a-f-]{36}-[\w.-]{1,80}$/i;
+  const match = pattern.exec(key);
+  return Boolean(match && match[1] === userId && !key.includes(".."));
 }
 
 export async function saveLocalFile(key: string, data: ArrayBuffer) {
@@ -63,9 +65,4 @@ export async function removeFile(key: string) {
     return;
   }
   await rm(localPath(key), { force: true });
-}
-
-export function safeFileName(name: string) {
-  const base = name.normalize("NFKD").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "-").slice(-80);
-  return base || "file";
 }

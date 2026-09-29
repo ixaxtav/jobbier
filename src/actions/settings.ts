@@ -51,7 +51,7 @@ export async function changePasswordAction(_: unknown, form: FormData): Promise<
   const parsed = passwordChangeInput.safeParse(formToObject(form));
   if (!parsed.success) return invalid(parsed.error);
   if (!(await verifyPassword(parsed.data.current, user.passwordHash))) {
-    return fail("Check the highlighted fields.", { current: "That's not your current password" });
+    return fail("Check the highlighted fields.", { current: "That’s not your current password" });
   }
   await updatePasswordHash(user.id, await hashPassword(parsed.data.next));
   await endOtherSessions(user.id);
@@ -68,7 +68,7 @@ export async function deleteAccountAction(_: unknown, form: FormData): Promise<A
   const user = await requireUser();
   const confirm = String(form.get("confirm") ?? "").trim().toLowerCase();
   if (confirm !== user.email.toLowerCase()) {
-    return fail("Type your email exactly to confirm.", { confirm: "Doesn't match your email" });
+    return fail("Type your email exactly to confirm.", { confirm: "Doesn’t match your email" });
   }
   await endSession();
   await deleteAccount(user.id);

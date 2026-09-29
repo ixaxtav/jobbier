@@ -50,9 +50,9 @@ export async function uploadDocument({
 }): Promise<{ ok: true; id: string } | { ok: false; error: string }> {
   const type = contentTypeFor(file);
   if (file.size > MAX_BYTES) return { ok: false, error: `${file.name} is over 10 MB.` };
-  if (!TYPES.has(type)) return { ok: false, error: `${file.name} isn't a PDF, Word, text, or image file.` };
+  if (!TYPES.has(type)) return { ok: false, error: `${file.name} isn’t a PDF, Word, text, or image file.` };
 
-  const safe = file.name.normalize("NFKD").replace(/[^\w.\- ]+/g, "").replace(/\s+/g, "-").slice(-80) || "file";
+  const safe = file.name.normalize("NFKD").replace(/\s+/g, "-").replace(/[^\w.-]+/g, "").replace(/\.{2,}/g, ".").slice(-80) || "file";
   const key = `users/${userId}/${crypto.randomUUID()}-${safe}`;
 
   try {

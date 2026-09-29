@@ -153,7 +153,7 @@ function FileRow({ row }: { row: Row }) {
         onOpenChange={setConfirmDelete}
         size="sm"
         title={`Delete ${doc.name}?`}
-        description={jobCount ? `It's attached to ${pluralize(jobCount, "job")}. It'll be removed from ${jobCount === 1 ? "it" : "them"} too.` : "This can't be undone."}
+        description={jobCount ? `It’s attached to ${pluralize(jobCount, "job")}. It’ll be removed from ${jobCount === 1 ? "it" : "them"} too.` : "This can’t be undone."}
       >
         <div className="flex justify-end gap-2">
           <Button variant="ghost" onClick={() => setConfirmDelete(false)}>

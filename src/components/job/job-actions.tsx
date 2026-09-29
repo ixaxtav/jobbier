@@ -96,7 +96,7 @@ function ShareDialog({ job, friends, onClose }: { job: Job; friends: Friend[]; o
       open
       onOpenChange={(open) => !open && onClose()}
       title="Send to a friend"
-      description={`They'll get ${job.title} at ${job.company} in their Leads, with your note. Your own notes and files stay private.`}
+      description={`They’ll get ${job.title} at ${job.company} in their Leads, with your note. Your own notes and files stay private.`}
       size="sm"
     >
       {friends.length === 0 ? (

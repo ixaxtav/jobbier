@@ -50,7 +50,7 @@ export default async function JobsPage({ searchParams }: PageProps<"/jobs">) {
         <EmptyState
           icon={<Briefcase />}
           title="Nothing tracked yet"
-          body="Add a job you're eyeing — even one you haven't applied to. Paste its link and Jobbier fills in the rest."
+          body="Add a job you’re eyeing — even one you haven’t applied to. Paste its link and Jobbier fills in the rest."
           action={<AddJobButton />}
         />
       ) : (

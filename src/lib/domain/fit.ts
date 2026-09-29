@@ -23,7 +23,7 @@ export function fitWarnings(job: FitJob, prefs: Prefs): string[] {
 
   if (prefs.workModes.length > 0 && job.workMode && !prefs.workModes.includes(job.workMode)) {
     const wanted = prefs.workModes.map((m) => WORK_MODE_LABEL[m].toLowerCase()).join(" or ");
-    warnings.push(`${WORK_MODE_LABEL[job.workMode]}, but you're looking for ${wanted}`);
+    warnings.push(`${WORK_MODE_LABEL[job.workMode]}, but you’re looking for ${wanted}`);
   }
 
   return warnings;

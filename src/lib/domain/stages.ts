@@ -66,7 +66,7 @@ export function applyStageChange(
 ): (StageState & { stageChangedAt: Date }) | { error: string } {
   if (to === "closed" && !outcome) return { error: "Choose how it ended before closing it." };
   if (to !== "closed" && outcome) return { error: "Only closed jobs have an outcome." };
-  if (to === current.stage && outcome === current.outcome) return { error: "It's already there." };
+  if (to === current.stage && outcome === current.outcome) return { error: "It’s already there." };
 
   const reached = to === "closed" ? impliedStageForOutcome(outcome!) : to;
   const furthestStage = trackIndex(reached) > trackIndex(current.furthestStage) ? reached : current.furthestStage;

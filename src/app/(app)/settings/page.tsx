@@ -55,7 +55,7 @@ export default async function SettingsPage() {
             <ProfileForm name={user.name} timeZone={user.timeZone} />
             <p className="mt-4 text-sm text-ink-3">Signed in as {user.email}.</p>
           </Section>
-          <Section id="preferences" title="Job preferences" description="Optional. Jobbier uses these to flag jobs that don't fit and to decide when an application has gone quiet.">
+          <Section id="preferences" title="Job preferences" description="Optional. Jobbier uses these to flag jobs that don’t fit and to decide when an application has gone quiet.">
             <PreferencesForm payFloor={user.payFloor} payFloorPeriod={user.payFloorPeriod} workModes={user.workModes} staleAfterDays={user.staleAfterDays} />
           </Section>
           <Section id="invite" title="Invite friends" description="Jobbier is better with a few friends: you can send each other job leads.">
@@ -64,7 +64,7 @@ export default async function SettingsPage() {
           <Section id="appearance" title="Appearance">
             <ThemePicker initial={theme} />
           </Section>
-          <Section id="data" title="Your data" description="Download everything you've put into Jobbier, any time.">
+          <Section id="data" title="Your data" description="Download everything you’ve put into Jobbier, any time.">
             <div className="flex flex-wrap gap-2">
               <a href="/api/export" className="inline-flex h-10 items-center gap-2 rounded-md border border-line-strong bg-surface px-3.5 text-sm font-medium hover:border-ink-3 hover:bg-surface-2">
                 <Download aria-hidden className="size-4" /> Everything (JSON)
